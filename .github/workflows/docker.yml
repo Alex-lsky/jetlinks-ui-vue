@@ -28,7 +28,6 @@ jobs:
           set NODE_OPTIONS=-max_old_space_size=8096
           yarn install
           yarn run build
-          cp -r dist docker/
           docker build -t registry.cn-hangzhou.aliyuncs.com/sky-devops/jetlinks-ui-vue:$(node -p "require('./package.json').version")  ./
 
       - name: Push Docker

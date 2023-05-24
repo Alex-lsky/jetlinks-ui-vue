@@ -1,0 +1,35 @@
+name: build images
+on:
+    push:
+        branches: ["master", "2.0", "next"]
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    # runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v3.2.0
+      - name: Checkout
+        uses: aliyun/acr-login@v1 # 使用阿里云镜像服务action
+        with:
+          persist-credentials: false
+          login-server: registry.cn-hangzhou.aliyuncs.com # 务必正确填写镜像容器服务的登录地址
+          username: "${{ secrets.REGISTRY_USERNAME }}" # 引用GitHub repo设置的镜像容器服务用户名
+          password: "${{ secrets.REGISTRY_PASSWORD }}" # 引用GitHub repo设置的镜像容器服务密码
+      - name: login
+        run: |
+          docker login --username=${{ secrets.REGISTRY_USERNAME }} registry.cn-hangzhou.aliyuncs.com --password=${{ secrets.REGISTRY_PASSWORD }}
+#      - name: Cache npm Repository
+#        uses: actions/cache@v1
+#        with:
+#          path: ./node_modules
+#          key: jetlinks-ui-pro-repository
+      - name: Install 🔧
+        run: |
+          set NODE_OPTIONS=-max_old_space_size=8096
+          yarn install
+          yarn run build
+          cp -r dist docker/
+          docker build -t registry.cn-hangzhou.aliyuncs.com/sky-devops/jetlinks-ui-vue:$(node -p "require('./package.json').version")  ./
+
+      - name: Push Docker
+        run: docker push registry.cn-hangzhou.aliyuncs.com/sky-devops/jetlinks-ui-vue:$(node -p "require('./package.json').version")

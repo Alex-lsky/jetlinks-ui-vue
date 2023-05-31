@@ -21,7 +21,7 @@
                         </div>
                         <template #overlay>
                           <j-menu @click="recordStart">
-                            <j-menu-item key='false'>
+                            <j-menu-item key='false' v-if='route.query.type !== "fixed-media"'>
                               <span style='padding-right: 12px;'>本地存储</span>
                               <j-tooltip title='存储在设备本地'>
                                 <a-icon type='QuestionCircleOutlined' />
@@ -104,6 +104,8 @@ const props = defineProps({
         default: () => ({}),
     },
 });
+
+const route = useRoute();
 
 const _vis = computed({
     get: () => props.visible,

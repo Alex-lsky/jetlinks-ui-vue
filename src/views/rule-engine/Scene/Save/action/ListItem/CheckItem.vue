@@ -125,7 +125,8 @@ const checkDeviceDelete = async () => {
     if (item!.selectorValues && metadata?.tags?.length) {
       const values = (item!.selectorValues?.[0]?.value as any).map((item: any) => item.column)
       const tagKeys = new Set(values)
-      hasAllTags = metadata?.tags?.every((item: any) => tagKeys.has(item.id))
+      hasAllTags = [...tagKeys.values()].every((_key) => metadata?.tags.some((item: any) => item.id === _key))
+      // hasAllTags = metadata?.tags?.every((item: any) => tagKeys.has(item.id))
     }
     if (!hasAllTags) {
       _data.value.branches![props.branchesName].then[props.thenName].actions[props.name].device!.selectorValues = undefined
@@ -152,8 +153,8 @@ const checkDeviceDelete = async () => {
 
   if (item!.message!.messageType === 'WRITE_PROPERTY') {
     let hasProperties = false
+    const propertiesKey = Object.keys(item!.message!.properties!)?.[0]
     if (item!.message!.properties && metadata.properties.length) {
-      const propertiesKey = Object.keys(item!.message!.properties!)?.[0]
       hasProperties = metadata.properties?.some((item: any) => item.id === propertiesKey)
     }
     if (!hasProperties) {
@@ -161,6 +162,22 @@ const checkDeviceDelete = async () => {
       _data.value.branches![props.branchesName].then[props.thenName].actions[props.name].device!.changeData = true
       formTouchOff()
       return
+    }
+    // 判断值-内置参数
+    const _value = item!.message!.properties?.[propertiesKey]
+    if(_value.source === 'upper') {
+      const _params = {
+        branch: props.thenName,
+        branchGroup: props.branchesName,
+        action: props.name - 1,
+      };
+      const option = (await getBuildInData(_params, _data.value))(_value?.value!, 'id')
+      if(!option) {
+        _data.value.branches![props.branchesName].then[props.thenName].actions[props.name].device!.message!.properties![propertiesKey] = undefined
+        _data.value.branches![props.branchesName].then[props.thenName].actions[props.name].device!.changeData = true
+        formTouchOff()
+        return
+      }
     }
   }
 
@@ -226,12 +243,13 @@ const checkNoticeDelete = async () => {
           const itemType = variableDefinitionsMap.get(variableKey)
           let hasUser = false
 
+          console.log(itemType, notifyType)
           if (itemType === 'user') { // 微信用户，钉钉用户
             let resp = undefined;
-            if (notifyType === 'dingTalk') {
-              resp = await noticeConfig.queryDingTalkUsers(item!.notifierId);
+            if (['dingTalk', 'weixin'].includes(notifyType)) {
+              resp = notifyType === 'dingTalk' ? await noticeConfig.queryDingTalkUsers(item!.notifierId) : await noticeConfig.queryWechatUsers(item!.notifierId);
             } else {
-              resp = await noticeConfig.queryWechatUsers(item!.notifierId);
+              hasUser = true
             }
 
             if (resp && resp.success) {
@@ -250,10 +268,10 @@ const checkNoticeDelete = async () => {
 
           if (itemType === 'org') { // 组织
             let resp = undefined;
-            if (notifyType === 'dingTalk') {
-              resp = await noticeConfig.dingTalkDept(item!.notifierId)
+            if (['dingTalk', 'weixin'].includes(notifyType)) {
+              resp = notifyType === 'dingTalk' ? await noticeConfig.dingTalkDept(item!.notifierId) : await noticeConfig.weChatDept(item!.notifierId)
             } else {
-              resp = await noticeConfig.weChatDept(item!.notifierId)
+              hasUser = true
             }
 
             if (resp && resp.success) {

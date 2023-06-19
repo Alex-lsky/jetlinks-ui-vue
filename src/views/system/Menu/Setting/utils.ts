@@ -1,4 +1,4 @@
-import { cloneDeep } from 'lodash-es';
+import { cloneDeep, omit } from 'lodash-es';
 import type {
     AntTreeNodeDropEvent,
     TreeProps,
@@ -39,6 +39,10 @@ export const mergeArr = (oldData: Array<any>, newData: Array<any>) => {
             return newItem;
         }
 
+        if(oldItem && newItem){
+            oldItem.sortIndex = newItem?.sortIndex
+        }
+
         if (!oldItem.children && newItem.children) {
             oldItem.children = newItem.children;
             return oldItem;
@@ -56,9 +60,7 @@ export const mergeArr = (oldData: Array<any>, newData: Array<any>) => {
                     (child) => child.code === oldChild.code,
                 );
                 if (index !== -1) {
-                    mergedChildren.push(
-                        mergeItem(oldChild, newChildren[index]),
-                    );
+                    mergedChildren.push(mergeItem(oldChild, newChildren[index]));
                     newChildren.splice(index, 1);
                 } else {
                     //防止重复code，系统已经选中的code不能再从old中添加
@@ -67,15 +69,16 @@ export const mergeArr = (oldData: Array<any>, newData: Array<any>) => {
                     }
                 }
             }
+
             return {
                 ...oldItem,
                 children: mergedChildren.concat(newChildren),
             };
         }
 
-        return oldItem;
+        return oldItem
     };
-
+    
     for (const newItem of newData) {
         const oldItem = oldData.find((item) => item.code === newItem.code);
         mergedData.push(mergeItem(oldItem, newItem));
@@ -98,7 +101,7 @@ export const mergeArr = (oldData: Array<any>, newData: Array<any>) => {
         }
     }
 
-    return mergedData;
+    return mergedData
 };
 
 /**
@@ -312,8 +315,18 @@ export const handleSorts = (node: any[]) => {
         if (item.index !== index) {
             item.sortIndex = index
             if (item.children) {
-                item.children = handleSorts(item.children)
+                item.children = handleSorts(item.children).sort((a, b) => a.sortIndex - b.sortIndex)
             }
+        }
+        return item
+    })
+}
+
+export const handleSortsArr = (node: any[]) => {
+    if (!node) return []
+    return node.sort((a, b) => a.sortIndex - b.sortIndex).map((item) => {
+        if (item.children) {
+            item.children = handleSortsArr(item.children)
         }
         return item
     })
